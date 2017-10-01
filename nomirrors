@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+
+# nomirrors by ibrahim mohammad
+# Email: ibrahim.mohammad.2015@gmail.com
+# GitHub repository: https://github.com/IbrahimMohammad/nomirrors 
+
+# deactivate mirrorlist lines and activate baseurl lines in all repositories
+
+from os import listdir
+from sys import argv
+
+def repos_dir_error(msg):
+    """ handle errors from repos_dir variable """
+    print(msg)
+    repos_dir = input(
+           "Please enter your full repositories directory path or q for quit: "
+            )
+    if repos_dir == 'q':
+        exit()
+    return repos_dir
+
+
+# if user input repos_dir as commandline argument
+if len(argv) > 1:
+    if argv[1][-1] != '/':
+        argv[1] += '/'
+    repos_dir = argv[1]
+else:
+    repos_dir = '/etc/yum.repos.d/'
+flag = True
+
+# here we go!
+while flag:
+    # if repos_dir raise an error
+    try:
+        repos = listdir(repos_dir)
+    except FileNotFoundError:
+        msg = "can't find your repositories directory at " + repos_dir
+        repos_dir = repos_dir_error(msg)
+        continue
+    except NotADirectoryError:
+        msg = repos_dir + " is not a directory."
+        repos_dir = repos_dir_error(msg)
+        continue
+
+    # if there are no files in repos_dir
+    if not repos:
+        msg = repos_dir + " is an empty directory"
+        repos_dir = repos_dir_error(msg)
+        continue
+
+    # for every file in repos_dir
+    found_repo = False
+    for repo in repos:
+        # if it is not a repo file
+        if repo[-5:] != '.repo':
+            continue
+        else:
+            # we have found at least one repo file
+            found_repo = True
+        file_path = repos_dir + repo
+        print("Processing", repo, "file:")
+        # read repo file
+        with open(file_path, 'r') as f_obj:
+            lines = f_obj.readlines()
+        # process line by line
+        for i, line in enumerate(lines):
+            # line must be bigger than 10 chars
+            if len(line) < 10:
+                continue
+            # if line begin with
+            if line[:8] == 'metalink' or line[:10] == 'mirrorlist':
+                # deactivate this line
+                lines[i] = '#' + lines[i]
+                print("\tmirrorlist directive at line",
+                        i+1, "has been deactivated.")
+            # if line begin with #baseurl
+            elif line[:8] == '#baseurl':
+                # active this line
+                lines[i] = line[1:]
+                print("\tbaseurl directive at line",
+                    i+1, "has been activated.")
+        # write lines to repo file
+        with open(file_path, 'w') as f_obj:
+            f_obj.write(''.join(lines))
+        print('\n', end='')
+
+    # if there is no repos
+    if not found_repo:
+        msg = "There is no repositories at " + repos_dir
+        repos_dir = repos_dir_error(msg)
+        continue
+    flag = False
+
+exit()
